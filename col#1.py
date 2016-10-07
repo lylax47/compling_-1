@@ -25,7 +25,7 @@ def std_dev(dif_list, mean):                   # calculates standard of deviatio
 def values(texts, word, wind):
     co_tot_dic = {}
     indices_dif = {}
-    stop = string.punctuation
+    stop = list(string.punctuation)
     stop.append('–')
     tokens = nltk.word_tokenize(texts)
     indices = ([i for i, j in enumerate(tokens) if j == word])  # finds indices of word in texts
@@ -52,14 +52,19 @@ def values(texts, word, wind):
     token_tot = len(tokens)
     word_tot = len(indices)
     print(co_tot_dic)
-    sys.exit()
+    #sys.exit()
     return (token_tot, word_tot, co_tot_dic)        # returns 3 value tuple with - token total, word total,\
     #  and dictionary --> {collocate:[co-occurrence count, total collocate count, mean dist, std_dev dist], ...}
 
 
-# def chi_sq():        #placeholders for finished functions
-                       #NB instructions for implementing each algorithm can be found in the text!
-#                      #I'm hoping that most of the info you need should be extracted.
+def chi_sq():  
+    w1 = float(vals[1])#key word in corpus without collocates 
+    none = float(vals[0]) - w1 #all tokens in corpus without key word and collocate
+    for token in list(vals[2].keys()):
+        for val in list(vals[2].values()):
+            w2 = float(val[1]-val[0]) #amount of every colocate in corpus
+            both = float(val[0]) #amount of every collocation in corpus
+        return(float(vals[0])*(both*none-w1*w2)**2/(both+w2)*(both+w1)*(both+none)*(none+w1))
 # def loglike():
 #                      #NB Please only return 100 best results!!!
 #                      #NB and return results in dictionary format with collocates as keys and their values!!!
@@ -75,6 +80,6 @@ for root,dirs,files in os.walk("nanocorpus"):   # cleans all corpus texts in nan
             corps.append(clean(corpus.read()))
 texts = "\n".join(corps)                        # combines texts into one large text
 vals = values(texts,word,wind)
-# chi_sq(vals)                                  #placeholders for finished stat functions
+chi_sq(vals)                                  #placeholders for finished stat functions
 # loglike(vals)
 # mutual(vals)
