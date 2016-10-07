@@ -23,6 +23,7 @@ def std_dev(dif_list, mean):                   # calculates standard of deviatio
 
 
 def values(texts, word, wind):
+    texts = texts.lower()
     co_tot_dic = {}
     indices_dif = {}
     stop = list(string.punctuation)
