@@ -1,9 +1,11 @@
 import os
-import sys    #for sys.exit() to help with debugging
+import sys
 import regex as re
 import nltk
 import string
 import math
+import csv
+
 
 def clean(corp):
     n_corp = re.sub('<!-- The default annotation set -->(.|\n)*',r'', corp) # removes end half of xml tags
@@ -52,24 +54,80 @@ def values(texts, word, wind):
         co_tot_dic[k].append(std_dev(indices_dif[k], k_mean))                  # append std of dev of coll k
     token_tot = len(tokens)
     word_tot = len(indices)
-    print(co_tot_dic)
-    #sys.exit()
     return (token_tot, word_tot, co_tot_dic)        # returns 3 value tuple with - token total, word total,\
     #  and dictionary --> {collocate:[co-occurrence count, total collocate count, mean dist, std_dev dist], ...}
 
 
-def chi_sq():  
-    w1 = float(vals[1])#key word in corpus without collocates 
-    none = float(vals[0]) - w1 #all tokens in corpus without key word and collocate
-    for token in list(vals[2].keys()):
-        for val in list(vals[2].values()):
-            w2 = float(val[1]-val[0]) #amount of every colocate in corpus
-            both = float(val[0]) #amount of every collocation in corpus
-        return(float(vals[0])*(both*none-w1*w2)**2/(both+w2)*(both+w1)*(both+none)*(none+w1))
-# def loglike():
-#                      #NB Please only return 100 best results!!!
-#                      #NB and return results in dictionary format with collocates as keys and their values!!!
-# def mutual_info():
+def chi_sq(vals):
+    chi_dic = {}
+    w1 = vals[1]                         # key word in corpus without collocates
+    none = vals[0] - w1                  # all tokens in corpus without key word and collocate
+    for token, val in vals[2].items():
+        w2 = val[1]-val[0]               # amount of every colocate in corpus
+        both = val[0]                    # amount of every collocation in corpus
+        chi_dic[token] = (vals[0])*(both*none-w1*w2)**2/(both+w2)*(both+w1)*(both+none)*(none+w1)
+    return chi_dic
+
+
+def loglike(vals):
+    log_dic = {}
+    n1 = vals[1]
+    n = vals[0]
+    for token, val in vals[2].items():
+        k1 = val[0]
+        x1 = k1/n1
+        k2 = val[1] - k1
+        n2 = n - n1
+        x2 = k2/n2
+        p = val[1]/n
+        try:
+            one = math.log((p ** k1) * (1 - p) ** (n1 - k1))
+        except ValueError:
+            one = 0
+        try:
+            two = math.log((p ** k2) * (1 - p) ** (n2 - k2))
+        except ValueError:
+            two = 0
+        try:
+            three = math.log((x1 ** k1) * (1 - x1) ** (n1 - k1))
+        except ValueError:
+            three = 0
+        try:
+            four = math.log((x2 ** k2) * (1 - x2) ** (n2 - k2))
+        except ValueError:
+            four = 0
+        log_dic[token] = (-2) * (one + two - three - four)
+    return log_dic
+
+
+def mutual(vals):
+    d = {}
+    ws = vals[0]
+    px = vals[1]
+    nmbrs = vals[2]
+    for token in nmbrs:
+        val = nmbrs[token]
+        pxy = val[0]
+        py = val[1]
+        pmi = math.log((pxy*ws)/(px*py), 2)
+        d[token] = pmi
+    return d
+
+
+def organize(vals, chi, pmi, logs):
+    final = {}
+    for coll, val in vals[2].items():
+        final.update({coll:[val[0], val[2], val[3], chi[coll], pmi[coll], logs[coll]]})
+    return final
+
+
+def csv_write(word,wind,final):
+    with open('{0}_{1}_results.csv'.format(word,wind), 'w') as csvfile:
+        wr = csv.writer(csvfile, delimiter = ',')
+        wr.writerow(['collocate', 'cooc', 'mean_dist', 'std_dev_dist', 'chi_sq', 'MI', 'loglike'])
+        for coll, values in final.items():
+            wr.writerow([coll, values[0], values[1], values[2], values[3], values[4], values[5]])
+
 
 
 corps = []
@@ -81,6 +139,9 @@ for root,dirs,files in os.walk("nanocorpus"):   # cleans all corpus texts in nan
             corps.append(clean(corpus.read()))
 texts = "\n".join(corps)                        # combines texts into one large text
 vals = values(texts,word,wind)
-chi_sq(vals)                                  #placeholders for finished stat functions
-# loglike(vals)
-# mutual(vals)
+chi = chi_sq(vals)
+logs = loglike(vals)
+pmi = mutual(vals)
+final = organize(vals, chi, pmi, logs)
+csv_write(word,wind,final)
+
